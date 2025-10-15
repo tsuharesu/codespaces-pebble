@@ -1,0 +1,184 @@
+#include <pebble.h>
+#include "helpers.h"
+
+static Window *s_main_window;
+static TextLayer *s_time_cmd_layer;
+static TextLayer *s_time_layer;
+static TextLayer *s_info_cmd_layer;
+static TextLayer *s_info_layer;
+static TextLayer *s_weather_cmd_layer;
+static TextLayer *s_weather_layer;
+static GFont s_time_font;
+static int s_battery_level;
+static bool s_bt_connected;
+
+static void main_window_load(Window *window) {
+  Layer *window_layer = window_get_root_layer(window);
+  GRect bounds = layer_get_bounds(window_layer);
+  s_time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DOS_15));
+
+  const int FONT_SIZE = 15;
+  const int MARGIN = 1;
+  int line_pos = MARGIN;
+
+  s_time_cmd_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
+  line_pos += FONT_SIZE;
+  s_time_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE * 2), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
+  line_pos += FONT_SIZE * 3;
+  
+  s_info_cmd_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
+  line_pos += FONT_SIZE;
+  s_info_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
+  line_pos += FONT_SIZE * 2;
+  
+  s_weather_cmd_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
+  line_pos += FONT_SIZE;
+  s_weather_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
+
+  text_layer_set_text(s_time_cmd_layer, "$ ./datetime.sh");
+  text_layer_set_text(s_info_cmd_layer, "$ ./info.sh");
+  text_layer_set_text(s_weather_cmd_layer, "$ ./weather.sh");
+  text_layer_set_text(s_weather_layer, "Loading...");
+}
+
+static void update_weather() {
+  // TODO: Implement weather fetching
+}
+
+static void update_time() {
+  time_t temp = time(NULL);
+  struct tm *tick_time = localtime(&temp);
+  
+  static char s_time[8];
+  strftime(s_time, sizeof(s_time), clock_is_24h_style() ? "%H:%M" : "%I:%M", tick_time);
+  
+  static char s_date[17];
+  strftime(s_date, sizeof(s_date), "%a %b %d, %Y", tick_time);
+  
+  static char line[] = "DATE: Wed Oct 15, 2025\nTIME: 24:00";
+  snprintf(line, sizeof(line), "DATE: %s\nTIME: %s", s_date, s_time);
+    
+  text_layer_set_text(s_time_layer, line);
+}
+
+static void update_info() {
+  static char s_info_line[32];
+  snprintf(s_info_line, sizeof(s_info_line), "BATTERY: %d%% | BT: %s", s_battery_level, s_bt_connected ? "Y" : "N");
+  text_layer_set_text(s_info_layer, s_info_line);
+}
+
+static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
+  update_time();
+
+  // Get weather update every 30 minutes
+  if(tick_time->tm_min % 30 == 0) {
+    // Begin dictionary
+    DictionaryIterator *iter;
+    app_message_outbox_begin(&iter);
+
+    // Add a key-value pair
+    dict_write_uint8(iter, 0, 0);
+
+    // Send the message!
+    app_message_outbox_send();
+  }
+}
+
+static void battery_callback(BatteryChargeState state) {
+  s_battery_level = state.charge_percent;
+  update_info();
+}
+
+static void bluetooth_callback(bool connected) {
+  s_bt_connected = connected;
+  update_info();
+}
+
+static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
+  // Store incoming information
+  static char temperature_buffer[8];
+  static char conditions_buffer[32];
+  static char weather_layer_buffer[32];
+
+  // Read tuples for data
+  Tuple *temp_tuple = dict_find(iterator, MESSAGE_KEY_TEMPERATURE_C);
+  Tuple *conditions_tuple = dict_find(iterator, MESSAGE_KEY_CONDITIONS);
+
+  // If all data is available, use it
+  if(temp_tuple && conditions_tuple) {
+    snprintf(temperature_buffer, sizeof(temperature_buffer), "%dC", (int)temp_tuple->value->int32);
+    snprintf(conditions_buffer, sizeof(conditions_buffer), "%s", conditions_tuple->value->cstring);
+  }
+
+  // Assemble full string and display
+  snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%s, %s", temperature_buffer, conditions_buffer);
+  text_layer_set_text(s_weather_layer, weather_layer_buffer);
+}
+
+static void inbox_dropped_callback(AppMessageResult reason, void *context) {
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
+}
+
+static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
+}
+
+static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
+}
+
+static void main_window_unload(Window *window) {
+  text_layer_destroy_safe(s_time_cmd_layer);
+  text_layer_destroy_safe(s_time_layer);
+  text_layer_destroy_safe(s_info_cmd_layer);
+  text_layer_destroy_safe(s_info_layer);
+  text_layer_destroy_safe(s_weather_cmd_layer);
+  text_layer_destroy_safe(s_weather_layer);
+  fonts_unload_custom_font_safe(s_time_font);
+}
+
+static void init() {
+  s_main_window = window_create();
+  
+  window_set_window_handlers(s_main_window, (WindowHandlers) {
+    .load = main_window_load,
+    .unload = main_window_unload
+  });
+
+  window_set_background_color(s_main_window, GColorBlack);
+  
+  window_stack_push(s_main_window, true);
+  
+  update_time();
+  battery_callback(battery_state_service_peek());
+  bluetooth_callback(connection_service_peek_pebble_app_connection());
+
+  // Register time callbacks
+  tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+  // Register for Battery connection updates
+  battery_state_service_subscribe(battery_callback);
+  // Register for Bluetooth connection updates
+  connection_service_subscribe((ConnectionHandlers) {
+    .pebble_app_connection_handler = bluetooth_callback
+  });
+  // Register message callbacks
+  app_message_register_inbox_received(inbox_received_callback);
+  app_message_register_inbox_dropped(inbox_dropped_callback);
+  app_message_register_outbox_failed(outbox_failed_callback);
+  app_message_register_outbox_sent(outbox_sent_callback);
+  
+  // Open AppMessage
+  const int inbox_size = 128;
+  const int outbox_size = 128;
+  app_message_open(inbox_size, outbox_size);
+}
+
+static void deinit() {
+  window_destroy(s_main_window);
+}
+
+int main(void) {
+  init();
+  app_event_loop();
+  deinit();
+}
