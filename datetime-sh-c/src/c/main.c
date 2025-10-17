@@ -1,6 +1,7 @@
 #include <pebble.h>
 #include "helpers.h"
 #include "weather_info.h"
+#include "settings.h"
 
 static Window *s_main_window;
 static TextLayer *s_time_cmd_layer;
@@ -36,9 +37,14 @@ static void main_window_load(Window *window) {
   line_pos += FONT_SIZE;
   s_weather_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
 
-  text_layer_set_text(s_time_cmd_layer, "$ ./datetime.sh");
-  text_layer_set_text(s_info_cmd_layer, "$ ./info.sh");
-  text_layer_set_text(s_weather_cmd_layer, "$ ./weather.sh");
+  // Use configured command symbol
+  static char cmd_buf[32];
+  snprintf(cmd_buf, sizeof(cmd_buf), "%c ./datetime.sh", app_settings.cmd_symbol);
+  text_layer_set_text(s_time_cmd_layer, cmd_buf);
+  snprintf(cmd_buf, sizeof(cmd_buf), "%c ./info.sh", app_settings.cmd_symbol);
+  text_layer_set_text(s_info_cmd_layer, cmd_buf);
+  snprintf(cmd_buf, sizeof(cmd_buf), "%c ./weather.sh", app_settings.cmd_symbol);
+  text_layer_set_text(s_weather_cmd_layer, cmd_buf);
   text_layer_set_text(s_weather_layer, "Loading...");
 }
 
@@ -99,8 +105,46 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   // Read tuples for data
   Tuple *temp_tuple = dict_find(iterator, MESSAGE_KEY_TEMPERATURE);
   Tuple *conditions_tuple = dict_find(iterator, MESSAGE_KEY_CONDITIONS);
+  // Clay settings tuples
+  Tuple *conf_temp_tuple = dict_find(iterator, MESSAGE_KEY_ConfTemp);
+  Tuple *conf_symbol_tuple = dict_find(iterator, MESSAGE_KEY_ConfSymbol);
 
-  // If all data is available, use it
+  // If Clay settings present, update settings first
+  if(conf_temp_tuple || conf_symbol_tuple) {
+    bool settings_changed = false;
+    if(conf_temp_tuple) {
+      // ConfTemp should be sent as a string 'C'/'F'
+      if(conf_temp_tuple->type == TUPLE_CSTRING && conf_temp_tuple->value->cstring[0]) {
+        char c = conf_temp_tuple->value->cstring[0];
+        if(c == 'C' || c == 'c') {
+          app_settings.temp_unit = 'C';
+          settings_changed = true;
+        } else if(c == 'F' || c == 'f') {
+          app_settings.temp_unit = 'F';
+          settings_changed = true;
+        }
+      }
+    }
+    if(conf_symbol_tuple && conf_symbol_tuple->type == TUPLE_CSTRING) {
+      if(conf_symbol_tuple->value->cstring[0] != '\0') {
+        app_settings.cmd_symbol = conf_symbol_tuple->value->cstring[0];
+        settings_changed = true;
+      }
+    }
+    if(settings_changed) {
+      settings_save();
+      // Refresh command labels to use new symbol
+      static char cmd_buf2[32];
+      snprintf(cmd_buf2, sizeof(cmd_buf2), "%c ./datetime.sh", app_settings.cmd_symbol);
+      text_layer_set_text(s_time_cmd_layer, cmd_buf2);
+      snprintf(cmd_buf2, sizeof(cmd_buf2), "%c ./info.sh", app_settings.cmd_symbol);
+      text_layer_set_text(s_info_cmd_layer, cmd_buf2);
+      snprintf(cmd_buf2, sizeof(cmd_buf2), "%c ./weather.sh", app_settings.cmd_symbol);
+      text_layer_set_text(s_weather_cmd_layer, cmd_buf2);
+    }
+  }
+
+  // If weather data is present, update it
   if(temp_tuple && conditions_tuple) {
     // Get temperature in Kelvin as a float for more accurate conversion
     float temp_k = (float)temp_tuple->value->int32;
@@ -111,10 +155,15 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     
     strncpy(weather_info.conditions, conditions_tuple->value->cstring, sizeof(weather_info.conditions));
 
-    // Update display
+    // Update display according to user-selected unit
     static char weather_layer_buffer[32];
-    snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%dC, %s", 
-             weather_info.temperature_c, weather_info.conditions);
+    if (app_settings.temp_unit == 'F') {
+      snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%dF, %s", 
+               weather_info.temperature_f, weather_info.conditions);
+    } else {
+      snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%dC, %s", 
+               weather_info.temperature_c, weather_info.conditions);
+    }
     text_layer_set_text(s_weather_layer, weather_layer_buffer);
   }
 }
@@ -142,7 +191,8 @@ static void main_window_unload(Window *window) {
 }
 
 static void init() {
-  // Initialize weather info
+  // Initialize settings and weather info
+  settings_init();
   weather_info_init();
   
   s_main_window = window_create();
