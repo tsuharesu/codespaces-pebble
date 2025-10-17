@@ -29,12 +29,12 @@ static void main_window_load(Window *window) {
 
   s_time_cmd_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
   line_pos += FONT_SIZE;
-  s_time_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE * 2), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
+  s_time_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE * 3), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
   line_pos += FONT_SIZE * 3;
   
   s_info_cmd_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
   line_pos += FONT_SIZE;
-  s_info_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
+  s_info_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE * 2), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
   line_pos += FONT_SIZE * 2;
   
   s_weather_cmd_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
@@ -64,15 +64,15 @@ static void update_time() {
   static char s_date[17];
   strftime(s_date, sizeof(s_date), "%a %b %d, %Y", tick_time);
   
-  static char line[] = "DATE: Wed Oct 15, 2025\nTIME: 24:00";
-  snprintf(line, sizeof(line), "DATE: %s\nTIME: %s", s_date, s_time);
+  static char line[] = "Wed Oct 15, 2025\n24:00";
+  snprintf(line, sizeof(line), "%s\n%s", s_date, s_time);
     
   text_layer_set_text(s_time_layer, line);
 }
 
 static void update_info() {
   static char s_info_line[32];
-  snprintf(s_info_line, sizeof(s_info_line), "BATTERY: %d%% | BT: %s", s_battery_level, s_bt_connected ? "Y" : "N");
+  snprintf(s_info_line, sizeof(s_info_line), "POWER: %d%% | BT: %s", s_battery_level, s_bt_connected ? "Y" : "N");
   text_layer_set_text(s_info_layer, s_info_line);
 }
 
