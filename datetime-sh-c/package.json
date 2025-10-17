@@ -23,6 +23,13 @@
           "file": "fonts/perfect_dos.ttf",
           "name": "FONT_DOS_15",
           "type": "font"
+        },
+        {
+          "file": "images/icon.jpg",
+          "menuIcon": true,
+          "name": "IMAGE_ICON",
+          "targetPlatforms": null,
+          "type": "bitmap"
         }
       ]
     },
