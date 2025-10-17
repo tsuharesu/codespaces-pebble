@@ -11,6 +11,10 @@ static TextLayer *s_info_layer;
 static TextLayer *s_weather_cmd_layer;
 static TextLayer *s_weather_layer;
 static GFont s_time_font;
+// Use configured command symbol. Use separate persistent buffers for each layer
+static char cmd_time[32];
+static char cmd_info[32];
+static char cmd_weather[32];
 static int s_battery_level;
 static bool s_bt_connected;
 
@@ -37,14 +41,12 @@ static void main_window_load(Window *window) {
   line_pos += FONT_SIZE;
   s_weather_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
 
-  // Use configured command symbol
-  static char cmd_buf[32];
-  snprintf(cmd_buf, sizeof(cmd_buf), "%c ./datetime.sh", app_settings.cmd_symbol);
-  text_layer_set_text(s_time_cmd_layer, cmd_buf);
-  snprintf(cmd_buf, sizeof(cmd_buf), "%c ./info.sh", app_settings.cmd_symbol);
-  text_layer_set_text(s_info_cmd_layer, cmd_buf);
-  snprintf(cmd_buf, sizeof(cmd_buf), "%c ./weather.sh", app_settings.cmd_symbol);
-  text_layer_set_text(s_weather_cmd_layer, cmd_buf);
+  snprintf(cmd_time, sizeof(cmd_time), "%c ./datetime.sh", app_settings.cmd_symbol);
+  text_layer_set_text(s_time_cmd_layer, cmd_time);
+  snprintf(cmd_info, sizeof(cmd_info), "%c ./info.sh", app_settings.cmd_symbol);
+  text_layer_set_text(s_info_cmd_layer, cmd_info);
+  snprintf(cmd_weather, sizeof(cmd_weather), "%c ./weather.sh", app_settings.cmd_symbol);
+  text_layer_set_text(s_weather_cmd_layer, cmd_weather);
   text_layer_set_text(s_weather_layer, "Loading...");
 }
 
@@ -133,14 +135,13 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     }
     if(settings_changed) {
       settings_save();
-      // Refresh command labels to use new symbol
-      static char cmd_buf2[32];
-      snprintf(cmd_buf2, sizeof(cmd_buf2), "%c ./datetime.sh", app_settings.cmd_symbol);
-      text_layer_set_text(s_time_cmd_layer, cmd_buf2);
-      snprintf(cmd_buf2, sizeof(cmd_buf2), "%c ./info.sh", app_settings.cmd_symbol);
-      text_layer_set_text(s_info_cmd_layer, cmd_buf2);
-      snprintf(cmd_buf2, sizeof(cmd_buf2), "%c ./weather.sh", app_settings.cmd_symbol);
-      text_layer_set_text(s_weather_cmd_layer, cmd_buf2);
+      // Refresh command labels to use new symbol (update persistent buffers)
+      snprintf(cmd_time, sizeof(cmd_time), "%c ./datetime.sh", app_settings.cmd_symbol);
+      text_layer_set_text(s_time_cmd_layer, cmd_time);
+      snprintf(cmd_info, sizeof(cmd_info), "%c ./info.sh", app_settings.cmd_symbol);
+      text_layer_set_text(s_info_cmd_layer, cmd_info);
+      snprintf(cmd_weather, sizeof(cmd_weather), "%c ./weather.sh", app_settings.cmd_symbol);
+      text_layer_set_text(s_weather_cmd_layer, cmd_weather);
     }
   }
 
@@ -154,7 +155,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     weather_info.temperature_f = (int)((temp_k - 273.15) * 9.0f / 5.0f + 32.0f + 0.5f);
     
     strncpy(weather_info.conditions, conditions_tuple->value->cstring, sizeof(weather_info.conditions));
-
+  }
     // Update display according to user-selected unit
     static char weather_layer_buffer[32];
     if (app_settings.temp_unit == 'F') {
@@ -165,7 +166,6 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
                weather_info.temperature_c, weather_info.conditions);
     }
     text_layer_set_text(s_weather_layer, weather_layer_buffer);
-  }
 }
 
 static void inbox_dropped_callback(AppMessageResult reason, void *context) {

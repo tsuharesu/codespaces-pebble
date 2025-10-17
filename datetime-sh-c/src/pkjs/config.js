@@ -21,11 +21,11 @@ module.exports = [
                 "label": "Temperature Unit",
                 "options": [
                     {
-                        "label": "Celsius (°C)",
+                        "label": "Celsius (C)",
                         "value": "C"
                     },
                     {
-                        "label": "Fahrenheit (°F)",
+                        "label": "Fahrenheit (F)",
                         "value": "F"
                     }
                 ]
