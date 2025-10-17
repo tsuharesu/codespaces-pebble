@@ -1,3 +1,10 @@
+// Import the Clay package
+var Clay = require('pebble-clay');
+// Load our Clay configuration file
+var clayConfig = require('./config');
+// Initialize Clay
+var clay = new Clay(clayConfig);
+
 const myAPIKey = "API_HERE"; // Replace with your OpenWeatherMap API key
 
 function locationSuccess(pos) {
@@ -10,6 +17,7 @@ function locationSuccess(pos) {
     "&appid=" +
     myAPIKey;
 
+  console.log(JSON.stringify(pos));
   // Send request to OpenWeatherMap
   xhrRequest(url, "GET", function (responseText) {
     // responseText contains a JSON object with weather info
@@ -18,10 +26,7 @@ function locationSuccess(pos) {
     // Assemble dictionary using our keys from package.json
     const weather = {
       // Convert from Kelvin
-      TEMPERATURE_C: Math.round(weatherData.main.temp - 273.15),
-      TEMPERATURE_F: Math.round(
-        ((weatherData.main.temp - 273.15) * 9) / 5 + 32
-      ),
+      TEMPERATURE: Math.round(weatherData.main.temp),
       CONDITIONS: weatherData.weather[0].main,
     };
 

@@ -1,5 +1,6 @@
 #include <pebble.h>
 #include "helpers.h"
+#include "weather_info.h"
 
 static Window *s_main_window;
 static TextLayer *s_time_cmd_layer;
@@ -95,24 +96,27 @@ static void bluetooth_callback(bool connected) {
 }
 
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
-  // Store incoming information
-  static char temperature_buffer[8];
-  static char conditions_buffer[32];
-  static char weather_layer_buffer[32];
-
   // Read tuples for data
-  Tuple *temp_tuple = dict_find(iterator, MESSAGE_KEY_TEMPERATURE_C);
+  Tuple *temp_tuple = dict_find(iterator, MESSAGE_KEY_TEMPERATURE);
   Tuple *conditions_tuple = dict_find(iterator, MESSAGE_KEY_CONDITIONS);
 
   // If all data is available, use it
   if(temp_tuple && conditions_tuple) {
-    snprintf(temperature_buffer, sizeof(temperature_buffer), "%dC", (int)temp_tuple->value->int32);
-    snprintf(conditions_buffer, sizeof(conditions_buffer), "%s", conditions_tuple->value->cstring);
-  }
+    // Get temperature in Kelvin as a float for more accurate conversion
+    float temp_k = (float)temp_tuple->value->int32;
+    
+    // Convert Kelvin to Celsius and Fahrenheit with proper rounding
+    weather_info.temperature_c = (int)(temp_k - 273.15 + 0.5f);
+    weather_info.temperature_f = (int)((temp_k - 273.15) * 9.0f / 5.0f + 32.0f + 0.5f);
+    
+    strncpy(weather_info.conditions, conditions_tuple->value->cstring, sizeof(weather_info.conditions));
 
-  // Assemble full string and display
-  snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%s, %s", temperature_buffer, conditions_buffer);
-  text_layer_set_text(s_weather_layer, weather_layer_buffer);
+    // Update display
+    static char weather_layer_buffer[32];
+    snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%dC, %s", 
+             weather_info.temperature_c, weather_info.conditions);
+    text_layer_set_text(s_weather_layer, weather_layer_buffer);
+  }
 }
 
 static void inbox_dropped_callback(AppMessageResult reason, void *context) {
@@ -138,6 +142,9 @@ static void main_window_unload(Window *window) {
 }
 
 static void init() {
+  // Initialize weather info
+  weather_info_init();
+  
   s_main_window = window_create();
   
   window_set_window_handlers(s_main_window, (WindowHandlers) {

@@ -1,6 +1,8 @@
 {
   "author": "Tsuharesu",
-  "dependencies": {},
+  "dependencies": {
+    "pebble-clay": "^1.0.4"
+  },
   "keywords": [],
   "name": "datetime.sh",
   "private": true,
@@ -9,9 +11,10 @@
     "displayName": "datetime.sh",
     "enableMultiJS": true,
     "messageKeys": [
-      "TEMPERATURE_C",
-      "TEMPERATURE_F",
-      "CONDITIONS"
+      "TEMPERATURE",
+      "CONDITIONS",
+      "ConfSymbol",
+      "ConfTemp"
     ],
     "projectType": "native",
     "resources": {
@@ -34,7 +37,8 @@
       "watchface": true
     },
     "capabilities": [
-      "location"
+      "location",
+      "configurable"
     ]
   },
   "version": "1.0.0"
