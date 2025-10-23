@@ -9,6 +9,8 @@ void settings_init(void) {
   // defaults
   app_settings.temp_unit = 'C';
   app_settings.cmd_symbol = '$';
+  app_settings.display_color = GColorBlack;
+  app_settings.font_color = GColorWhite;
 
   // load persisted (if any)
   settings_load();
@@ -21,12 +23,5 @@ void settings_save(void) {
 void settings_load(void) {
   if (persist_exists(SETTINGS_PKEY)) {
     persist_read_data(SETTINGS_PKEY, &app_settings, sizeof(AppSettings));
-    // Sanity-check values
-    if (app_settings.temp_unit != 'C' && app_settings.temp_unit != 'F') {
-      app_settings.temp_unit = 'C';
-    }
-    if (app_settings.cmd_symbol == '\0') {
-      app_settings.cmd_symbol = '$';
-    }
   }
 }

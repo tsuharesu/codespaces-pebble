@@ -25,23 +25,27 @@ static void main_window_load(Window *window) {
   GRect bounds = layer_get_bounds(window_layer);
   s_time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DOS_15));
 
+  // Apply persisted colors
+  window_set_background_color(window, app_settings.display_color);
+
   const int FONT_SIZE = 15;
   const int MARGIN = 1;
+  const int MAX_WIDTH = bounds.size.w - MARGIN;
   int line_pos = MARGIN;
 
-  s_time_cmd_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
+  s_time_cmd_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, MAX_WIDTH, FONT_SIZE), s_time_font, GColorClear, app_settings.font_color, GTextAlignmentLeft);
   line_pos += FONT_SIZE;
-  s_time_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE * 3), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
+  s_time_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, MAX_WIDTH, FONT_SIZE * 3), s_time_font, GColorClear, app_settings.font_color, GTextAlignmentLeft);
   line_pos += FONT_SIZE * 3;
   
-  s_info_cmd_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
+  s_info_cmd_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, MAX_WIDTH, FONT_SIZE), s_time_font, GColorClear, app_settings.font_color, GTextAlignmentLeft);
   line_pos += FONT_SIZE;
-  s_info_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE * 2), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
+  s_info_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, MAX_WIDTH, FONT_SIZE * 2), s_time_font, GColorClear, app_settings.font_color, GTextAlignmentLeft);
   line_pos += FONT_SIZE * 2;
   
-  s_weather_cmd_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
+  s_weather_cmd_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, MAX_WIDTH, FONT_SIZE), s_time_font, GColorClear, app_settings.font_color, GTextAlignmentLeft);
   line_pos += FONT_SIZE;
-  s_weather_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, bounds.size.w, FONT_SIZE), s_time_font, GColorClear, GColorWhite, GTextAlignmentLeft);
+  s_weather_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, MAX_WIDTH, FONT_SIZE), s_time_font, GColorClear, app_settings.font_color, GTextAlignmentLeft);
 
   snprintf(cmd_time, sizeof(cmd_time), "%c ./datetime.sh", app_settings.cmd_symbol);
   text_layer_set_text(s_time_cmd_layer, cmd_time);
@@ -120,6 +124,8 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   // Clay settings tuples
   Tuple *conf_temp_tuple = dict_find(iterator, MESSAGE_KEY_ConfTemp);
   Tuple *conf_symbol_tuple = dict_find(iterator, MESSAGE_KEY_ConfSymbol);
+  Tuple *conf_display_color_tuple = dict_find(iterator, MESSAGE_KEY_ConfDisplayColor);
+  Tuple *conf_font_color_tuple = dict_find(iterator, MESSAGE_KEY_ConfFontColor);
 
   // If Clay settings present, update settings first
   if(conf_temp_tuple || conf_symbol_tuple) {
@@ -153,6 +159,31 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
       snprintf(cmd_weather, sizeof(cmd_weather), "%c ./weather.sh", app_settings.cmd_symbol);
       text_layer_set_text(s_weather_cmd_layer, cmd_weather);
     }
+  }
+
+  // Handle color settings sent from Clay (as integer HEX values)
+  bool colors_changed = false;
+  if (conf_display_color_tuple && (conf_display_color_tuple->type == TUPLE_INT || conf_display_color_tuple->type == TUPLE_UINT)) {
+    app_settings.display_color = GColorFromHEX((uint32_t)conf_display_color_tuple->value->int32);
+    // Apply background color immediately
+    if (s_main_window) {
+      window_set_background_color(s_main_window, app_settings.display_color);
+    }
+    colors_changed = true;
+  }
+  if (conf_font_color_tuple && (conf_font_color_tuple->type == TUPLE_INT || conf_font_color_tuple->type == TUPLE_UINT)) {
+    app_settings.font_color = GColorFromHEX((uint32_t)conf_font_color_tuple->value->int32);
+    // Apply font color to all text layers
+    text_layer_set_text_color(s_time_cmd_layer, app_settings.font_color);
+    text_layer_set_text_color(s_time_layer, app_settings.font_color);
+    text_layer_set_text_color(s_info_cmd_layer, app_settings.font_color);
+    text_layer_set_text_color(s_info_layer, app_settings.font_color);
+    text_layer_set_text_color(s_weather_cmd_layer, app_settings.font_color);
+    text_layer_set_text_color(s_weather_layer, app_settings.font_color);
+    colors_changed = true;
+  }
+  if (colors_changed) {
+    settings_save();
   }
 
   // If weather data is present, update it

@@ -14,7 +14,9 @@
       "TEMPERATURE",
       "CONDITIONS",
       "ConfSymbol",
-      "ConfTemp"
+      "ConfTemp",
+      "ConfDisplayColor",
+      "ConfFontColor"
     ],
     "projectType": "native",
     "resources": {

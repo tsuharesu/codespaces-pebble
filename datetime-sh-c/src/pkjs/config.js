@@ -49,6 +49,18 @@ module.exports = [
                     "maxlength": 1
                 }
             },
+            {
+                "type": "color",
+                "messageKey": "ConfDisplayColor",
+                "label": "Background Color",
+                "defaultValue": "0x000000"
+            },
+            {
+                "type": "color",
+                "messageKey": "ConfFontColor",
+                "label": "Font Color",
+                "defaultValue": "0xFFFFFF"
+            },
         ]
     },
     {
