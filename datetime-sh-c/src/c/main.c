@@ -18,6 +18,8 @@ static char cmd_weather[32];
 static int s_battery_level;
 static bool s_bt_connected;
 
+static void update_weather();
+
 static void main_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
@@ -51,7 +53,15 @@ static void main_window_load(Window *window) {
 }
 
 static void update_weather() {
-  // TODO: Implement weather fetching
+  static char weather_layer_buffer[32];
+  if (app_settings.temp_unit == 'F') {
+    snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%dF, %s", 
+             weather_info.temperature_f, weather_info.conditions);
+  } else {
+    snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%dC, %s", 
+             weather_info.temperature_c, weather_info.conditions);
+  }
+  text_layer_set_text(s_weather_layer, weather_layer_buffer);
 }
 
 static void update_time() {
@@ -156,16 +166,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     
     strncpy(weather_info.conditions, conditions_tuple->value->cstring, sizeof(weather_info.conditions));
   }
-    // Update display according to user-selected unit
-    static char weather_layer_buffer[32];
-    if (app_settings.temp_unit == 'F') {
-      snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%dF, %s", 
-               weather_info.temperature_f, weather_info.conditions);
-    } else {
-      snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%dC, %s", 
-               weather_info.temperature_c, weather_info.conditions);
-    }
-    text_layer_set_text(s_weather_layer, weather_layer_buffer);
+  update_weather();
 }
 
 static void inbox_dropped_callback(AppMessageResult reason, void *context) {
