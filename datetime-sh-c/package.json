@@ -47,7 +47,8 @@
     },
     "capabilities": [
       "location",
-      "configurable"
+      "configurable",
+      "health"
     ]
   },
   "version": "1.0.0"

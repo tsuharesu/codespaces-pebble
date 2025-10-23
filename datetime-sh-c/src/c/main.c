@@ -3,6 +3,9 @@
 #include "weather_info.h"
 #include "settings.h"
 
+static bool s_health_available;
+static int s_heart_rate;
+
 static Window *s_main_window;
 static TextLayer *s_time_cmd_layer;
 static TextLayer *s_time_layer;
@@ -41,7 +44,7 @@ static void main_window_load(Window *window) {
   s_info_cmd_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, MAX_WIDTH, FONT_SIZE), s_time_font, GColorClear, app_settings.font_color, GTextAlignmentLeft);
   line_pos += FONT_SIZE;
   s_info_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, MAX_WIDTH, FONT_SIZE * 2), s_time_font, GColorClear, app_settings.font_color, GTextAlignmentLeft);
-  line_pos += FONT_SIZE * 2;
+  line_pos += FONT_SIZE * 3;
   
   s_weather_cmd_layer = text_layer_init(window_layer, GRect(MARGIN, line_pos, MAX_WIDTH, FONT_SIZE), s_time_font, GColorClear, app_settings.font_color, GTextAlignmentLeft);
   line_pos += FONT_SIZE;
@@ -85,8 +88,14 @@ static void update_time() {
 }
 
 static void update_info() {
-  static char s_info_line[32];
-  snprintf(s_info_line, sizeof(s_info_line), "POWER: %d%% | BT: %s", s_battery_level, s_bt_connected ? "Y" : "N");
+  static char s_info_line[48];
+  if (s_health_available && s_heart_rate > 0) {
+    snprintf(s_info_line, sizeof(s_info_line), "POWER: %d%% | BT: %s | HR: %d", 
+             s_battery_level, s_bt_connected ? "Y" : "N", s_heart_rate);
+  } else {
+    snprintf(s_info_line, sizeof(s_info_line), "POWER: %d%% | BT: %s", 
+             s_battery_level, s_bt_connected ? "Y" : "N");
+  }
   text_layer_set_text(s_info_layer, s_info_line);
 }
 
@@ -115,6 +124,13 @@ static void battery_callback(BatteryChargeState state) {
 static void bluetooth_callback(bool connected) {
   s_bt_connected = connected;
   update_info();
+}
+
+static void health_callback(HealthEventType event, void *context) {
+  if (event == HealthEventHeartRateUpdate) {
+    s_heart_rate = (int)health_service_peek_current_value(HealthMetricHeartRateBPM);
+    update_info();
+  }
 }
 
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
@@ -226,7 +242,7 @@ static void init() {
   // Initialize settings and weather info
   settings_init();
   weather_info_init();
-  
+
   s_main_window = window_create();
   
   window_set_window_handlers(s_main_window, (WindowHandlers) {
@@ -250,6 +266,12 @@ static void init() {
   connection_service_subscribe((ConnectionHandlers) {
     .pebble_app_connection_handler = bluetooth_callback
   });
+  // Rgister for Health updates
+  s_health_available = health_service_events_subscribe(health_callback, NULL);
+  if (s_health_available) {
+    // Get initial heart rate value if available
+    s_heart_rate = (int)health_service_peek_current_value(HealthMetricHeartRateBPM);
+  }
   // Register message callbacks
   app_message_register_inbox_received(inbox_received_callback);
   app_message_register_inbox_dropped(inbox_dropped_callback);
