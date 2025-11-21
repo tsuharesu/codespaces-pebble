@@ -28,11 +28,11 @@
     },
     "codespaces": {
       "openFiles": [
-        "src/rocky/index.js"
+        "src/c/main.c"
       ]
     }
   },
-  "workspaceFolder": "/workspaces/codespaces-pebble/datetime-sh",
+  "workspaceFolder": "/workspaces/codespaces-pebble/datetime-sh-c",
   "containerEnv": {
     "LOCALWORKSPACEFOLDERBASENAME": "${localWorkspaceFolderBasename}",
     "LOCALWORKSPACEFOLDER": "${localWorkspaceFolder}",
