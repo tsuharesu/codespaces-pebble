@@ -32,7 +32,7 @@
       ]
     }
   },
-  "workspaceFolder": "/workspaces/codespaces-pebble/datetime-sh-c",
+  "workspaceFolder": "/workspaces/codespaces-pebble/datetime-sh",
   "containerEnv": {
     "LOCALWORKSPACEFOLDERBASENAME": "${localWorkspaceFolderBasename}",
     "LOCALWORKSPACEFOLDER": "${localWorkspaceFolder}",
