@@ -1,19 +1,29 @@
----
-alwaysApply: true
----
-
 ## Project Overview
 
-This is a Pebble smartwatch application written in C using the Pebble SDK.
+**datetime.sh** is a sleek, terminal-inspired watchface for Pebble smartwatches that combines retro command-line aesthetics with modern functionality. It displays real-time date, time, and weather information alongside system status (battery level, Bluetooth connectivity, and heart rate) in a customizable command-line interface.
+
+### Key Features
+
+- **Real-Time Information**: Displays current date, time, temperature, and weather conditions
+- **System Status Monitoring**: Shows battery percentage, Bluetooth connection status, and heart rate
+- **Extensive Customization**: 
+  - Choose background and font colors
+  - Select temperature unit (°C or °F)
+  - Customize command prompt symbol
+- **Persistent Settings**: All preferences are saved locally and persist between app launches
+- **Intelligent Updates**: Weather data refreshes every 30 minutes; battery, heart rate, and connectivity update in real-time
+- **Retro Terminal Design**: Features DOS-inspired typography and command-line command labels
+
+For detailed configuration options, see [SETTINGS.md](docs/SETTINGS.md).
 
 ## Supported Platforms
 
 The app targets multiple Pebble watch models:
-- aplite (Pebble classic)
+- aplite (Pebble Classic)
 - basalt (Pebble Time)
-- chalk (Pebble Time Round)
 - diorite (Pebble 2)
 - emery (Pebble Time 2)
+- flint (Pebble 2 Duo)
 
 ## Commands
 
@@ -37,54 +47,45 @@ If you need more information on the `pebble` command or a sub-command, append `-
 
 ```
 src/c/           - C source files for the watchapp
-src/pkjs/        - PebbleKitJS files (currently empty)
-worker_src/c/    - Worker source files (optional, not present)
-resources/       - Images, fonts, and other resources (not present)
+src/pkjs/        - PebbleKitJS files, for communication with the phone app and Clay configuration file
+resources/       - Images, fonts, and other resources
 ```
-## Configuration
-
-By default, this project is initialized as a watchface. To make it an app, replace "watchface": true with "watchface": false in package.json.
-
 ## Architecture
 
-The application follows the standard Pebble app architecture:
+The application is a watchface built with the Pebble SDK and follows standard Pebble watchface architecture:
 
-1. **Main Entry Point**: `src/c` - The `main()` function initializes the app and starts the event loop
-2. **Window Management**: Single window app with text layer for displaying button press feedback
-3. **Event Handling**: Button click handlers registered via `prv_click_config_provider` for UP, DOWN, and SELECT buttons
+### Core Components
 
-## SDK Documentation
+1. **Main Window** (`src/c/main.c`): Central display engine with six text layers organized as command-line interface:
+   - Time command label and display (date + time)
+   - Info command label and display (battery, Bluetooth, heart rate)
+   - Weather command label and display (temperature + conditions)
 
-The full Pebble SDK documentation is available at https://developer.repebble.com.
+2. **Settings Management** (`src/c/settings.c`, `src/c/settings.h`): 
+   - Persists user preferences (colors, temperature unit, command symbol)
+   - Syncs with Clay configuration system
 
-Main Categories:
-- Tutorials - Step-by-step learning (C watchface tutorial in 5 parts, advanced topics)
-- Developer Guides - Comprehensive reference organized by topic
+3. **Weather Integration** (`src/c/weather_info.c`, `src/c/weather_info.h`):
+   - Struct for weather information
 
-Key Sections:
-- App Resources - Images, fonts, vector graphics, 256 resource limit
-- User Interfaces - Layer hierarchy, TextLayer, MenuLayer, round vs rectangular displays
-- Events & Services - Buttons, accelerometer, compass, health data, background workers
-- Communication - Bluetooth AppMessage, PebbleKit JS/Android/iOS integration
-- Graphics & Animations - Drawing APIs, property animations, vector graphics
-- Debugging - App logs, GDB, common errors and solutions
-- Best Practices - Multi-platform support, battery conservation, modular architecture
-- Design & Interaction - Glance-first design, one-click actions, platform guidelines
-- App Store Publishing - Submission requirements, assets, analytics
+4. **Helper Functions** (`src/c/helpers.c`, `src/c/helpers.h`):
+   - Utility functions for UI and data handling
 
-Key Entry Points:
-- https://developer.repebble.com/tutorials/watchface-tutorial/part1 - C development start
-- https://developer.repebble.com/guides/events-and-services/buttons - Button handling
-- https://developer.repebble.com/guides/user-interfaces/layers - UI foundations
+### Event Handling
 
-## Development Best Practices
+- **Tick Handler**: Updates time display every minute; requests weather update every 30 minutes
+- **Battery Callback**: Monitors battery level changes
+- **Bluetooth Callback**: Tracks Bluetooth connectivity status
+- **Health Callback**: Monitors heart rate data when available
+- **Message Handler**: Processes configuration from Clay and weather data from companion app
 
-- Whenever making changes, run `pebble screenshot` and view the screenshot to make sure it's what the user requested. If not, make more changes until it does what it's supposed to.
+### Data Flow
 
-## AI Interaction Guidelines
+1. Companion app sends weather data and user settings to watchface via AppMessage
+2. Settings are saved to persistent storage
+3. Tick events trigger display updates and periodic weather requests
+4. System callbacks update battery, Bluetooth, and heart rate information in real-time
 
-- When given an image of a watchface to replicate, describe the target watchface in precise detail. Note every visual element present, as well as size, alignment, font weight, spacing, and location.
+## Configuration
 
-## AI Code Review Guidelines
-
-- Once you think you've fulfilled the user's request, ask yourself if you see any issues with the current screenshot, and if there are any differences between the screenshot and the reference image or the user's description. If so, fix them.
+For information about user-facing configuration options, customizable settings, and Clay integration, see [SETTINGS.md](docs/SETTINGS.md).
